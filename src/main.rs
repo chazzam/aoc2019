@@ -136,8 +136,8 @@ struct Point {
 }
 struct Line (i32, i32, i32, i32);
 
-fn line_intersection(one: &Line, two: &Line) ->
-    Option<(i32, i32)> {
+fn line_intersection(one: &Line, two: &Line, steps1: i32, steps2: i32) ->
+    Option<(i32, i32, i32)> {
   if one.0 == 0 && one.1 == 0 && two.0 == 0 && two.1 == 0 {
     return None;
   }
@@ -182,10 +182,17 @@ fn line_intersection(one: &Line, two: &Line) ->
   let t:f64 = f64::from(t_numerator) / f64::from(d);
 
   // Collision detected
-  return Some(
-    (p0.x + (t * f64::from(s1.x)) as i32,
-     p0.y + (t * f64::from(s1.y)) as i32)
-  );
+  let x: i32 = p0.x + (t * f64::from(s1.x)) as i32;
+  let y: i32 = p0.y + (t * f64::from(s1.y)) as i32;
+  let walk_back1: i32 = distance(x, y, p1.x, p1.y);
+  let walk_back2: i32 = distance(x, y, p3.x, p3.y);
+  let steps = (steps1 + steps2 - walk_back1.abs() - walk_back2.abs()).abs();
+  //println!("s1:{} s2:{} w1:{} w2:{} s:{}", steps1, steps2, walk_back1, walk_back2, steps);
+  return Some((x, y, steps));
+}
+
+fn distance(ax:i32, ay:i32, bx:i32, by:i32) -> i32 {
+  f64::from((bx - ax).pow(2) + (by - ay).pow(2)).sqrt().floor() as i32
 }
 
 fn day_three() {
@@ -250,30 +257,59 @@ fn day_three() {
     println!("\n]");
     */
 
-    let mut distances: Vec<i32> = Vec::new();
+    let mut distances: Vec<(i32, i32)> = Vec::new();
+    // Add tracking distance down each line
+    // work in how to get distance down a segment to intersection
+    let mut steps1: i32 = 0;
+    let mut steps2: i32;
     for i in line1.iter() {
+      steps1 += distance(i.0, i.1, i.2, i.3);
+      steps2 = 0;
+      //let mut s2 = &steps2;
       distances.extend(
         line2.iter()
-        .filter_map(|x| line_intersection(i, x))
-        .map(|(x,y)| x.abs() + y.abs()));
+        .filter_map(|x| {
+          steps2 = steps2 + distance(x.0, x.1, x.2, x.3);
+          line_intersection(i, x, steps1, steps2) })
+        .map(|(x,y,s)| (x.abs() + y.abs(), s)));
     }
-    distances.sort();
+    // update sort to work on a tuple...
+    distances.sort_by(|(m1, _), (m2, _)| m1.partial_cmp(m2).unwrap());
     return distances;
   };
 
-  println!("D3p1::Test 1:   6 ?= {: >4}", manhattanize("R8,U5,L5,D3\nU7,R6,D4,L4\n")[0]);
-  println!("D3p1::Test 2: 159 ?= {: >4}", manhattanize("R75,D30,R83,U83,L12,D49,R71,U7,L72\nU62,R66,U55,R34,D71,R55,D58,R83\n")[0]);
-  println!("D3p1::Test 3: 135 ?= {: >4}", manhattanize("R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51\nU98,R91,D20,R16,D67,R40,U7,R15,U6,R7\n")[0]);
+  /* tests part 1
+  let mut t1 = manhattanize("R8,U5,L5,D3\nU7,R6,D4,L4\n");
+  println!("D3p1::Test 1:   6 ?= {: >4}; {}", t1[0].0, t1[0].1);
+
+  let mut t2 = manhattanize("R75,D30,R83,U83,L12,D49,R71,U7,L72\nU62,R66,U55,R34,D71,R55,D58,R83\n");
+  println!("D3p1::Test 2: 159 ?= {: >4}", t2[0].0);
+
+  let mut t3 = manhattanize("R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51\nU98,R91,D20,R16,D67,R40,U7,R15,U6,R7\n");
+  println!("D3p1::Test 3: 135 ?= {: >4}", t3[0].0);
+  // tests part 2
+  println!("");
+  t1.sort_by(|(_, s1), (_, s2)| s1.partial_cmp(s2).unwrap());
+  println!("D3p2::Test 1: {} intersections; distance: {}; steps: 30 ?= {}", t1.len(), t1[0].0, t1[0].1);
+  t2.sort_by(|(_, s1), (_, s2)| s1.partial_cmp(s2).unwrap());
+  println!("D3p2::Test 2: {} intersections; distance: {}; steps: 610 ?= {}", t2.len(), t2[0].0, t2[0].1);
+  t3.sort_by(|(_, s1), (_, s2)| s1.partial_cmp(s2).unwrap());
+  println!("D3p2::Test 2: {} intersections; distance: {}; steps: 410 ?= {}", t3.len(), t3[0].0, t3[0].1);
+  */
 
   let raw_input = include_str!("d3_1.lst"); // 554 too high
-  let intersects = manhattanize(raw_input);
+  let mut intersects = manhattanize(raw_input);
 
-  println!("D3p1:: {} intersections; distance: {}", intersects.len(), intersects[0]);
+  println!("D3p1:: {: >4} intersections; distance: {: >6}; steps: {: >6}", intersects.len(), intersects[0].0, intersects[0].1);
+
+  // 31908 too low
+  intersects.sort_by(|(_, s1), (_, s2)| s1.partial_cmp(s2).unwrap());
+  println!("D3p2:: {: >4} intersections; distance: {: >6}; steps: {: >6}\n", intersects.len(), intersects[0].0, intersects[0].1);
 }
 
 fn main() {
   day_one();
   day_two();
-  println!("Hello World!");
   day_three();
+  println!("Hello World!");
 }
