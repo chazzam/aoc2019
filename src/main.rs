@@ -355,23 +355,26 @@ pub fn day_four() {
 
 pub fn day_five() {
   //_print_vec(intcode([3,0,4,0,99].to_vec(), 0), 4);
-  _print_vec(intcode([1002,4,3,4,33].to_vec(), 0), 4);
+  //_print_vec(intcode([1002,4,3,4,33].to_vec(), 0), 4);
   let raw_input = include_str!("d5_1.lst");
   let int_input: Vec<i64> = raw_input
     .split(',')
     .filter_map(|x| x.trim().parse().ok())
     .collect();
-  println!("D5p1:: Result {: >10}",
+  println!("D5p1:: Input '1'");
+  println!("D5p1:: Input=1, Result: {: >10}\n",
     intcode(int_input.clone(), 0)[0]);
+  println!("D5p2:: Input '5'");
+  println!("D5p2:: Input=5, Result: {: >10}\n\n",
+    intcode(int_input, 0)[0]);
 }
 
 fn main() {
-  /*
   day_one();
   day_two();
   day_three();
   day_four();
-  println!("Hello World!");*/
   day_five();
+  println!("Hello World!");
   println!("Later World!");
 }
