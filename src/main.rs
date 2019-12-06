@@ -1,9 +1,11 @@
-//use std::fs;
-use std::convert::TryInto;
-//use std::vec::Splice;
-//use std::ops::Mul;
-//use std::ops::Sub;
-//use std::ops::Add;
+pub mod intcode;
+use intcode::intcode;
+
+pub struct Point {
+  x: i32,
+  y: i32,
+}
+pub struct Line (i32, i32, i32, i32);
 
 // Day one, naive does one calclation
 // not naive continues calculating using the result
@@ -18,25 +20,11 @@ fn calc_fuel_mass(mass: i32, naive: bool) -> i32 {
   return fuel_mass + calc_fuel_mass(fuel_mass, true);
 }
 
-fn day_one() {
-  //let ships_in = std::fs::read_to_string("d1_1.lst").unwrap();
-  let ships_in = include_str!("d1_1.lst");
-
-  let sum1 = ships_in
-      .lines()
-      .fold(0, |acc, x| acc + calc_fuel_mass(x.parse::<i32>().unwrap(), true));
-  println!("D1p1:: Final sum of mass: {} (naive)", sum1);
-
-  let sum2 = ships_in
-      .lines()
-      .fold(0, |acc, x| acc + calc_fuel_mass(x.parse::<i32>().unwrap(), false));
-  println!("D1p2:: Final sum of mass: {}\n", sum2);
-
-  /*let raw_mass = 1969;
-  println!("fuel mass: {} to {}", raw_mass, calc_fuel_mass(raw_mass, true));*/
+pub fn distance(ax:i32, ay:i32, bx:i32, by:i32) -> i32 {
+  f64::from((bx - ax).pow(2) + (by - ay).pow(2)).sqrt().floor() as i32
 }
 
-fn _print_vec(disp: Vec<usize>, width: usize) {
+pub fn _print_vec(disp: Vec<i64>, width: usize) {
   println!("[");
   for i in disp.iter().enumerate() {
     print!(" {: >4},", i.1);
@@ -47,94 +35,6 @@ fn _print_vec(disp: Vec<usize>, width: usize) {
   println!("\n]");
   return;
 }
-
-fn intcode(inputs: Vec<usize>, pc: usize) -> Vec<usize> {
-  // Intcode
-  // in set, place 0: opcode
-  // opcode 99: halt command processing
-  // opcode 1 (add): vec[set[3]] = vec[set[1]] + vec[set[2]]
-  // opcode 2 (mul): vec[set[3]] = vec[set[1]] * vec[set[2]]
-
-  let mut outputs = inputs.clone();
-  if inputs[pc] < 1 || inputs[pc] > 2 {
-    return outputs;
-  }
-
-  let dest: usize = inputs[pc + 3]
-      .try_into()
-      .unwrap();
-  let a: &usize = inputs
-      .get(inputs[pc + 1])
-      .unwrap();
-  let b: &usize = inputs
-      .get(inputs[pc + 2])
-      .unwrap();
-
-  /*if inputs[pc] == 1 {
-    outputs[dest] = a + b;
-  }
-  else if inputs[pc] == 2 {
-    outputs[dest] = a * b;
-  }*/
-  match inputs[pc] {
-    1 => outputs[dest] = a + b,
-    2 => outputs[dest] = a * b,
-    _ => eprintln!("Well, that wasn't supposed to happen"),
-  }
-  return intcode(outputs, pc + 4);
-}
-
-fn day_two() {
-  /*
-  // Test 1
-  _print_vec(intcode([1,0,0,0,99].to_vec(), 0), 4);
-  // Test 2
-  _print_vec(intcode([2,3,0,3,99].to_vec(), 0), 4);
-  // Test 3
-  _print_vec(intcode([2,4,4,5,99,0].to_vec(), 0), 4);
-  // Test 4
-  _print_vec(intcode([1,1,1,4,99,5,6,0,99].to_vec(), 0), 4);
-  */
-
-  //let raw_input = std::fs::read_to_string("d2_1.lst").unwrap();
-  let raw_input = include_str!("d2_1.lst");
-
-  let mut int_input: Vec<usize> = raw_input
-      .split(',')
-      .filter_map(|x| x.trim().parse().ok())
-      .collect();
-
-  // update inputs:
-  int_input[1] = 12;
-  int_input[2] = 2;
-  //_print_vec(calc_intcode(int_input.clone(), 0), 4);
-  println!("D2p1:: {: >12}: 12,  2 -> {: >10}",
-      "Inputs", intcode(int_input.clone(), 0)[0]);
-
-  // Find target inputs
-  let target = 19690720;
-  int_input[2] = 0;
-  let mut noun: usize = 0;
-  let mut verb: usize = 0;
-  for x in 0..=99 {
-    int_input[1] = x;
-    let result = intcode(int_input.clone(), 0)[0];
-    if result <= target && result + 100 >= target {
-      noun = x;
-      verb = target - result;
-      //println!("Found! noun {} and verb {}", x, verb);
-      break;
-    }
-  }
-  println!("D2p2:: {: >12}: {: >2}, {: >2} -> {: >10}\n",
-      target, noun, verb, 100 * noun + verb);
-}
-
-struct Point {
-  x: i32,
-  y: i32,
-}
-struct Line (i32, i32, i32, i32);
 
 fn line_intersection(one: &Line, two: &Line, steps1: i32, steps2: i32) ->
     Option<(i32, i32, i32)> {
@@ -191,11 +91,71 @@ fn line_intersection(one: &Line, two: &Line, steps1: i32, steps2: i32) ->
   return Some((x, y, steps));
 }
 
-fn distance(ax:i32, ay:i32, bx:i32, by:i32) -> i32 {
-  f64::from((bx - ax).pow(2) + (by - ay).pow(2)).sqrt().floor() as i32
+pub fn day_one() {
+  //let ships_in = std::fs::read_to_string("d1_1.lst").unwrap();
+  let ships_in = include_str!("d1_1.lst");
+
+  let sum1 = ships_in
+      .lines()
+      .fold(0, |acc, x| acc + calc_fuel_mass(x.parse::<i32>().unwrap(), true));
+  println!("D1p1:: Final sum of mass: {} (naive)", sum1);
+
+  let sum2 = ships_in
+      .lines()
+      .fold(0, |acc, x| acc + calc_fuel_mass(x.parse::<i32>().unwrap(), false));
+  println!("D1p2:: Final sum of mass: {}\n", sum2);
+
+  /*let raw_mass = 1969;
+  println!("fuel mass: {} to {}", raw_mass, calc_fuel_mass(raw_mass, true));*/
 }
 
-fn day_three() {
+pub fn day_two() {
+  /*
+  // Test 1
+  _print_vec(intcode([1,0,0,0,99].to_vec(), 0), 4);
+  // Test 2
+  _print_vec(intcode([2,3,0,3,99].to_vec(), 0), 4);
+  // Test 3
+  _print_vec(intcode([2,4,4,5,99,0].to_vec(), 0), 4);
+  // Test 4
+  _print_vec(intcode([1,1,1,4,99,5,6,0,99].to_vec(), 0), 4);
+  */
+
+  //let raw_input = std::fs::read_to_string("d2_1.lst").unwrap();
+  let raw_input = include_str!("d2_1.lst");
+
+  let mut int_input: Vec<i64> = raw_input
+      .split(',')
+      .filter_map(|x| x.trim().parse().ok())
+      .collect();
+
+  // update inputs:
+  int_input[1] = 12;
+  int_input[2] = 2;
+  //_print_vec(calc_intcode(int_input.clone(), 0), 4);
+  println!("D2p1:: {: >12}: 12,  2 -> {: >10}",
+      "Inputs", intcode(int_input.clone(), 0)[0]);
+
+  // Find target inputs
+  let target = 19690720;
+  int_input[2] = 0;
+  let mut noun: i64 = 0;
+  let mut verb: i64 = 0;
+  for x in 0..=99 {
+    int_input[1] = x;
+    let result = intcode(int_input.clone(), 0)[0];
+    if result <= target && result + 100 >= target {
+      noun = x;
+      verb = target - result;
+      //println!("Found! noun {} and verb {}", x, verb);
+      break;
+    }
+  }
+  println!("D2p2:: {: >12}: {: >2}, {: >2} -> {: >10}\n",
+      target, noun, verb, 100 * noun + verb);
+}
+
+pub fn day_three() {
   let manhattanize = |input: &str| {
     let mut raw_lines = input.lines();
 
@@ -278,7 +238,7 @@ fn day_three() {
     return distances;
   };
 
-  /* tests part 1
+  /* tests part 1 
   let mut t1 = manhattanize("R8,U5,L5,D3\nU7,R6,D4,L4\n");
   println!("D3p1::Test 1:   6 ?= {: >4}; {}", t1[0].0, t1[0].1);
 
@@ -307,9 +267,111 @@ fn day_three() {
   println!("D3p2:: {: >4} intersections; distance: {: >6}; steps: {: >6}\n", intersects.len(), intersects[0].0, intersects[0].1);
 }
 
+pub fn day_four() {
+  let test_password = |x:i32, strict:bool| -> Option<i32> {
+    // six digits
+    //if x.to_string().len() != 6 {
+    //  return None;
+    //}
+    /*let xstr = x.to_string();
+    let xs: Vec<i32> = xstr
+      .trim()
+      .split("")
+      .filter_map(|x| if x.len() > 0 { Some(x.trim().parse().unwrap()) } None )
+      .collect();*/
+    let xstr: &str = &x.to_string();
+    let xs: Vec<_> = xstr
+      .chars()
+      .map(|d| d.to_digit(10).unwrap())
+      .collect();
+    if xs.len() != 6 {
+      return None;
+    }
+    let mut xi = xs.iter();
+    let mut last:u32 = *xi.next().unwrap();
+    let mut adjacent = false;
+    let mut strict_adjacent = false;
+    for i in xi {
+      if (*i as i64) - (last as i64) < 0 {
+        return None;
+      }
+      if *i == last {
+        adjacent = true;
+      }
+      //println!("x:{} i:{} matches:{}", x, i, xstr.matches(i.to_string().repeat(2).as_str()).count());
+      if strict {
+        let doubles = xstr.matches(i.to_string().repeat(2).as_str()).count();
+        let triples = xstr.matches(i.to_string().repeat(3).as_str()).count();
+        if doubles == 1 && triples == 0 {
+          strict_adjacent = true;
+        }
+      }
+      last = *i;
+    }
+    if !adjacent {
+      return None;
+    }
+    if strict && !strict_adjacent {
+      return None;
+    }
+    // adjacent repeated digit
+    // never decreases from left to right
+    Some(x)
+  };
+  /* run Day 4 part 1 tests
+  // for p1, only 111111 is valid. for p2, none are valid
+  let mut tests: Vec<i32> = [111111, 223450, 123789].to_vec();
+  // for p1, all three valid. for p2, only 112233 and 111122 are valid
+  tests.extend([112233, 123444, 111122].to_vec());
+  let mut test_results: Vec<_> = tests
+    .iter()
+    .filter_map(|x| test_password(*x, false))
+    .collect();
+  for x in test_results.iter() {
+    println!("D4p1 valid {}", x);
+  }
+  test_results = tests
+    .iter()
+    .filter_map(|x| test_password(*x, true))
+    .collect();
+  for x in test_results.iter() {
+    println!("D4p2 valid {}", x);
+  }
+  */
+
+  let input: Vec<_> = (382345..843167).collect();
+  let results: Vec<_> = input
+    .iter()
+    .filter_map(|x| test_password(*x, false))
+    .collect();
+  println!("D4p1:: passwords: {: >5} (any adjacent)", results.len());
+  let p2_results: Vec<_> = results
+    .iter()
+    .filter_map(|x| test_password(*x, true))
+    .collect();
+  println!("D4p2:: passwords: {: >5} (strictly adjacent)\n", p2_results.len());
+  // 364 too high
+}
+
+pub fn day_five() {
+  //_print_vec(intcode([3,0,4,0,99].to_vec(), 0), 4);
+  _print_vec(intcode([1002,4,3,4,33].to_vec(), 0), 4);
+  let raw_input = include_str!("d5_1.lst");
+  let int_input: Vec<i64> = raw_input
+    .split(',')
+    .filter_map(|x| x.trim().parse().ok())
+    .collect();
+  println!("D5p1:: Result {: >10}",
+    intcode(int_input.clone(), 0)[0]);
+}
+
 fn main() {
+  /*
   day_one();
   day_two();
   day_three();
-  println!("Hello World!");
+  day_four();
+  println!("Hello World!");*/
+  day_five();
+  println!("Later World!");
 }
