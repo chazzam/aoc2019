@@ -1,5 +1,6 @@
 use intcode;
 use std::io;
+use generic;
 
 pub struct Point {
   x: i32,
@@ -22,18 +23,6 @@ fn calc_fuel_mass(mass: i32, naive: bool) -> i32 {
 
 pub fn distance(ax:i32, ay:i32, bx:i32, by:i32) -> i32 {
   f64::from((bx - ax).pow(2) + (by - ay).pow(2)).sqrt().floor() as i32
-}
-
-pub fn _print_vec(disp: Vec<i64>, width: usize) {
-  println!("[");
-  for i in disp.iter().enumerate() {
-    print!(" {: >4},", i.1);
-    if (i.0 != 0) && (((i.0 + 1) % width) == 0) {
-      println!("");
-    }
-  }
-  println!("\n]");
-  return;
 }
 
 fn line_intersection(one: &Line, two: &Line, steps1: i32, steps2: i32) ->
@@ -217,7 +206,7 @@ pub fn day_two() {
   int_input[2] = 2;
   //_print_vec(calc_intcode(int_input.clone(), 0), 4);
   println!("D2p1:: {: >12}: 12,  2 -> {: >10}",
-      "Inputs", intcode::intcode(int_input.clone(), 0)[0]);
+      "Inputs", intcode::intcode(int_input.clone(), 0).0[0]);
 
   // Find target inputs
   let target = 19690720;
@@ -228,7 +217,7 @@ pub fn day_two() {
   let empty = Vec::<i64>::new();
   for x in 0..=99 {
     int_input[1] = x;
-    let result = intcode::intcodesw(int_input.clone(), 0, empty.clone(), &mut io::sink())[0];
+    let result = intcode::intcodesw(int_input.clone(), 0, empty.clone(), &mut io::sink()).0[0];
     if result <= target && result + 100 >= target {
       noun = x;
       verb = target - result;
@@ -364,17 +353,17 @@ pub fn day_four() {
 pub fn day_five() {
   //_print_vec(intcode([3,0,4,0,99].to_vec(), 0), 4);
   //_print_vec(intcode([1002,4,3,4,33].to_vec(), 0), 4);
-  let raw_input = include_str!("inputs/d5_1.lst");
-  let int_input: Vec<i64> = raw_input
+  let input = intcode::int_input(include_str!("inputs/d5_1.lst"));
+  /*let int_input: Vec<i64> = raw_input
     .split(',')
     .filter_map(|x| x.trim().parse().ok())
-    .collect();
+    .collect();*/
   println!("D5p1:: Intcode() Input '1'");
   println!("D5p1:: Input=1, Result: {: >10}\n",
-    intcode::intcodes(int_input.clone(), 0, [1].to_vec())[0]);
-  println!("D5p2:: Intcode() Input '5'");
+    intcode::intcodes(input.clone(), 0, [1].to_vec()).1.last().unwrap());
+  //println!("D5p2:: Intcode() Input '5'");
   println!("D5p2:: Input=5, Result: {: >10}\n\n",
-    intcode::intcodes(int_input, 0, [5].to_vec())[0]);
+    intcode::intcodesq(input, 0, [5].to_vec()).1.last().unwrap());
 }
 
 pub fn run_days() {

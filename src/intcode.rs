@@ -1,13 +1,30 @@
 use std::convert::TryInto;
 use std::io::{self, Read};
 
-pub fn intcode(code: Vec<i64>, pc: usize) -> Vec<i64> {
+pub fn int_input(in_str: &str) -> Vec<i64> {
+  in_str
+    .trim()
+    .split(',')
+    .filter_map(|x| x.trim().parse().ok())
+    .collect()
+}
+
+pub fn intcode(code: Vec<i64>, pc: usize) -> (Vec<i64>, Vec<i64>) {
   let inputs = Vec::<i64>::new();
   intcodes(code, pc, inputs)
 }
 
-pub fn intcodes(code: Vec<i64>, pc: usize, inputs: Vec<i64>) -> Vec<i64> {
+pub fn intcodes(code: Vec<i64>, pc: usize, inputs: Vec<i64>) -> (Vec<i64>, Vec<i64>) {
   intcodesw(code, pc, inputs, &mut io::stdout())
+}
+
+pub fn intcodesq(
+      code: Vec<i64>, 
+      pc: usize, 
+      inputs: Vec<i64>) 
+    -> (Vec<i64>, Vec<i64>)
+{
+  intcodesw(code, pc, inputs, &mut io::sink())
 }
 
 pub fn intcodesw(
@@ -15,19 +32,35 @@ pub fn intcodesw(
       pc: usize, 
       inputs: Vec<i64>,
       stdout: &mut io::Write) 
-    -> Vec<i64>
+    -> (Vec<i64>, Vec<i64>)
 {
   let mut reversed_inputs = inputs.clone();
   reversed_inputs.reverse();
-  intcodes_internal(code, pc, &mut reversed_inputs, stdout)
+  let mut signals = Vec::<i64>::new();
+  intcodes_internal(code, pc, &mut reversed_inputs, false, stdout, &mut signals)
+}
+
+pub fn intcodesf(
+      code: Vec<i64>, 
+      pc: usize, 
+      inputs: Vec<i64>,
+      mut signals: &mut Vec<i64>) 
+    -> (Vec<i64>, Vec<i64>)
+{
+  let mut reversed_inputs = inputs.clone();
+  reversed_inputs.reverse();
+  intcodes_internal(code, pc, &mut reversed_inputs, true, &mut io::sink(), &mut signals)
+  //intcodes_internal(code, pc, &mut reversed_inputs, true, &mut io::stdout(), &mut signals)
 }
 
 fn intcodes_internal(
       code: Vec<i64>, 
       pc: usize, 
       inputs: &mut Vec<i64>,
-      stdout: &mut io::Write) 
-    -> Vec<i64>
+      feedback: bool,
+      stdout: &mut io::Write,
+      mut signals: &mut Vec<i64>) 
+    -> (Vec<i64>, Vec<i64>)
 {
   // Intcode
   // in set, place 0: opcode
@@ -36,16 +69,18 @@ fn intcodes_internal(
   // opcode 2 (mul): vec[set[3]] = vec[set[1]] * vec[set[2]]
 
   let mut outputs = code.clone();
+  //let code_outputs = Vec::<i64>::new();
   let op:i64 = code[pc];
 
   //println!("DEBUG:Intcode:: op:{}", op);
   if op == 99 {
     writeln!(stdout, "Intcode:: EXIT (SUCCESS)").ok();
-    return outputs;
+    return (outputs, signals.to_vec());
   }
   if op < 1 || op > 1198 {
     writeln!(stdout, "Intcode:: Received EXIT (FAILURE)").ok();
-    return outputs;
+    signals.push(i64::min_value());
+    return (outputs, signals.to_vec());
   }
 
   let parameterized = |x: i64, op: i64| {
@@ -67,20 +102,26 @@ fn intcodes_internal(
   if op_input {
     // input
     let input: i64;
-    if inputs.len() == 0 {
+    if inputs.len() > 0 {
+      input = inputs.pop().unwrap();
+      writeln!(stdout, "Intcode:: Input: {}", input).ok();
+    }
+    else if feedback && signals.len() > 0 {
+      input = signals.remove(0);
+      writeln!(stdout, "Intcode:: Input: {}", input).ok();
+    }
+    else {
       writeln!(stdout, "Intcode:: Input: ").ok();
       let mut buffer = String::new();
       io::stdin().read_to_string(&mut buffer).ok();
       input = buffer.trim().parse().unwrap();
-    } else {
-      input = inputs.pop().unwrap();
     }
     //let dest: usize = inputs[pc + 3]
     let dest: usize = code[pc + 1]
       .try_into()
       .unwrap();
     outputs[dest] = input;
-    return intcodes_internal(outputs, pc + 2, inputs, stdout);
+    return intcodes_internal(outputs, pc + 2, inputs, feedback, stdout, &mut signals)
   }
 
   // get the a parameter, handling parameter/immediate mode
@@ -92,7 +133,9 @@ fn intcodes_internal(
   if op_output {
     // output
     writeln!(stdout, "Intcode:: Print: {}", a).ok();
-    return intcodes_internal(outputs, pc + 2, inputs, stdout);
+    signals.push(a);
+    let (outputs, _) = intcodes_internal(outputs, pc + 2, inputs, feedback, stdout, &mut signals);
+    return (outputs, signals.to_vec());
   } 
 
   // get the b parameter, handling parameter/immediate mode
@@ -108,7 +151,7 @@ fn intcodes_internal(
     if (a != 0 && op_jump_true) || (a == 0 && op_jump_false) {
       new_pc = b as usize;
     }
-    return intcodes_internal(outputs, new_pc, inputs, stdout);
+    return intcodes_internal(outputs, new_pc, inputs, feedback, stdout, &mut signals);
   }
 
   // Get the third operation
@@ -122,7 +165,7 @@ fn intcodes_internal(
     } else {
       outputs[dest] = 0;
     }
-    return intcodes_internal(outputs, pc + 4, inputs, stdout);
+    return intcodes_internal(outputs, pc + 4, inputs, feedback, stdout, &mut signals);
   }
   else if op_add || op_mul {
     // add and multiply
@@ -131,8 +174,9 @@ fn intcodes_internal(
     } else {
       outputs[dest] = a * b;
     }
-    return intcodes_internal(outputs, pc + 4, inputs, stdout);
+    return intcodes_internal(outputs, pc + 4, inputs, feedback, stdout, &mut signals);
   }
   writeln!(stdout, "Intcode:: Received EXIT (FAILURE)").ok();
-  outputs
+  signals.push(i64::min_value());
+  (outputs, signals.to_vec())
 }
